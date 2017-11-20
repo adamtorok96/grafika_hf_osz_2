@@ -68,6 +68,14 @@ struct vec3 {
         return (x * v.x + y * v.y + z * v.z);
     }
 
+    vec3 cross(vec3 const & v) {
+        return vec3(
+                y * v.z - z * v.y,
+                z * v.x - x * v.z,
+                x * v.y - y * v.x
+        );
+    }
+
 //    operator float*() { return &x; }
 };
 
@@ -318,7 +326,7 @@ public:
         if( x < 0.0 )
             return hit;
 
-        if( x < EPSILON ) {
+        if( x == 0.0 ) { // x < EPSILON
             float d = (-1) * (ray.dir.dot(ray.org - origo)) + sqrtf(x);
 
             hit.position = ray.org + ray.dir * d;
@@ -350,6 +358,97 @@ public:
         return hit;
     }
 
+};
+
+class Triangle : public Intersectable {
+public:
+    vec3 v0, v1, v2;
+
+    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material) : Intersectable(material), v0(v0), v1(v1), v2(v2) {}
+
+//    Hit intersect(Ray & ray) override {
+//        Hit hit;
+//        hit.material = material;
+//
+//        vec3 v0v1 = v1 - v0;
+//        vec3 v0v2 = v2 - v0;
+//
+//        vec3 N = v0v1.cross(v0v2);
+//        float area2 = N.Length();
+//
+//        float nDotRayDirection = N.dot(ray.dir);
+//
+//        if( fabsf(nDotRayDirection) < EPSILON ) {
+//            return hit;
+//        }
+//
+//        float d = N.dot(v0);
+//
+//        hit.t = (N.dot(ray.org) + d) / nDotRayDirection;
+//
+//        printf("lol: %f\n", hit.t);
+//        if( hit.t < 0 )
+//            return hit;
+//
+//        printf("lel: %f\n", hit.t);
+//
+//        vec3 P = ray.org + ray.dir * hit.t;
+//
+//        vec3 C = v0v1.cross(P - v0);
+//
+//        if( N.dot(C)  < 0)
+//            return hit;
+//
+//        C = (v2 - v1).cross(P - v1);
+//
+//        if( N.dot(C)  < 0)
+//            return hit;
+//
+//        C = (v0 - v2).cross(P - v2);
+//
+//        if( N.dot(C)  < 0)
+//            return hit;
+//
+//        hit.position = P;
+//        hit.normal = ray.dir * (-1);
+//
+//        return hit;
+//    }
+
+    Hit intersect(Ray & ray) {
+        Hit hit;
+        hit.material = material;
+
+        vec3 v0v1 = v1 - v0;
+        vec3 v0v2 = v2 - v0;
+
+        vec3 pvec = ray.dir.cross(v0v2);
+        float det = v0v1.dot(pvec);
+
+        if( fabsf(det) < EPSILON )
+            return hit;
+
+        float invDet = 1 / det;
+
+        vec3 tvec = ray.org - v0;
+        float u = tvec.dot(pvec) * invDet;
+
+        if( u < 0 || u > 1 )
+            return hit;
+
+        vec3 qvec = tvec.cross(v0v1);
+
+        float v = ray.dir.dot(qvec) * invDet;
+
+        if( v < 0 || u + v > 1 )
+            return hit;
+
+        hit.t = v0v2.dot(qvec) * invDet;
+        hit.position = ray.org + ray.dir * hit.t;
+        hit.normal = v0v1.cross(v0v2);
+
+        return hit;
+    }
 };
 
 class Torus : Intersectable {
@@ -396,7 +495,7 @@ public:
     Light light;
     vec3 La;
 
-    Intersectable * objects[10];
+    Intersectable * objects[1000];
     unsigned nObjects;
 
     World() : nObjects(0) {
@@ -599,6 +698,14 @@ public:
     }
 };
 
+vec3 torusPoint(float R, float r, float u, float v) {
+    return vec3(
+            (R + r * cosf(u * 2 * M_PI)) * cosf(v * 2 * M_PI),
+            (R + r * cosf(u * 2 * M_PI)) * sinf(v * 2 * M_PI),
+            r * sinf(u * 2 * M_PI)
+    );
+}
+
 // The virtual world: single quad
 FullScreenTexturedQuad fullScreenTexturedQuad;
 
@@ -609,7 +716,6 @@ vec3 background[windowWidth * windowHeight];	// The image, which stores the ray 
 // Initialization, create an OpenGL context
 void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
-
     // Ray tracing fills the image called background
 //    for (int x = 0; x < windowWidth; x++) {
 //        for (int y = 0; y < windowHeight; y++) {
@@ -619,11 +725,48 @@ void onInitialization() {
 
     World world;
 
-    world.add(new Sphere(new GlassMaterial, vec3(), 100));
-    world.add(new Sphere(new GoldMaterial, vec3(150, 10, 10), 50));
-    world.add(new Sphere(new SilverMaterial, vec3(-150, 10, 10), 50));
+//    world.add(new Sphere(new GlassMaterial, vec3(0, 0, 1000), 100));
+//    world.add(new Sphere(new GoldMaterial, vec3(150, 10, 10), 50));
+//    world.add(new Sphere(new SilverMaterial, vec3(-150, 10, 10), 50));
+//    float t = 50 * 4;
+
+    float dist = 0;
+//    world.add(new Sphere(new SilverMaterial, vec3(0, 0, dist), 10));
+//    world.add(new Sphere(new SilverMaterial, vec3(50, 0, dist), 10));
+//    world.add(new Sphere(new SilverMaterial, vec3(0, 50, dist), 10));
+
+
+//    world.add(new Triangle(
+//            vec3(0, 0, dist),
+//            vec3(0, 50, dist),
+//            vec3(50, 0, dist),
+//            new GlassMaterial()
+//    ));
+
+    unsigned int N = 5, M = 5;
+    float R = 100, r = 50;
+
+    for (unsigned int i = 0; i < N; i++) {
+        for (unsigned int j = 0; j < M; j++) {
+            world.add(new Triangle(
+                            torusPoint(R, r, (float)i / N, (float)j / M),
+                            torusPoint(R, r, (float)(i + 1) / N,  (float)j / M),
+                            torusPoint(R, r, (float)i / N, (float)(j + 1) / M),
+                    new GlassMaterial
+                  ));
+
+            world.add(new Triangle(
+                    torusPoint(R, r, (float)(i + 1) / N,  (float)j / M),
+                    torusPoint(R, r, (float)(i + 1) / N,  (float)(j + 1) / M),
+                    torusPoint(R, r, (float)i / N, (float)(j + 1) / M),
+                    new GoldMaterial
+            ));
+        }
+    }
 
     world.render(background);
+
+    printf("render ready\n");
 
     fullScreenTexturedQuad.Create(background);
 
@@ -727,7 +870,7 @@ int main(int argc, char * argv[]) {
     glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
     glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
     printf("GL Version (integer) : %d.%d\n", majorVersion, minorVersion);
-    printf("GLSL Version : %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    printf("GLSL Version2 : %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
     onInitialization();
 
