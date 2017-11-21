@@ -360,60 +360,49 @@ public:
 
 };
 
+vec3 rotateX(vec3 v, float angle) {
+    return vec3(
+            v.x * 1 + v.y * 0 + v.z * 0,
+            v.x * 0 + v.y * cosf(angle) + v.z * (-1) * sinf(angle),
+            v.x * 0 + v.y * sinf(angle) + v.z * cosf(angle)
+    );
+}
+
+vec3 rotateY(vec3 v, float angle) {
+    return vec3(
+            v.x * cosf(angle) + v.y * 0 + v.z * sinf(angle),
+            v.x * 0 + v.y * 1 + v.z * 0,
+            v.x * (-1) * sinf(angle) + v.y * 0 + v.z * cosf(angle)
+    );
+}
+
+vec3 rotateZ(vec3 v, float angle) {
+    return vec3(
+            v.x * cosf(angle) + v.y * (-1) * sinf(angle) + v.z * 0,
+            v.x * sinf(angle) + v.y * cosf(angle) + v.z * 0,
+            v.x * 0 + v.y * 0 + v.z * 1
+    );
+}
+
+vec3 torusPoint(float R, float r, float u, float v) {
+    return vec3(
+            (R + r * cosf(u * 2 * M_PI)) * cosf(v * 2 * M_PI),
+            (R + r * cosf(u * 2 * M_PI)) * sinf(v * 2 * M_PI),
+            r * sinf(u * 2 * M_PI)
+    );
+}
+
+
+
 class Triangle : public Intersectable {
 public:
     vec3 v0, v1, v2;
 
-    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material) : Intersectable(material), v0(v0), v1(v1), v2(v2) {}
-
-//    Hit intersect(Ray & ray) override {
-//        Hit hit;
-//        hit.material = material;
-//
-//        vec3 v0v1 = v1 - v0;
-//        vec3 v0v2 = v2 - v0;
-//
-//        vec3 N = v0v1.cross(v0v2);
-//        float area2 = N.Length();
-//
-//        float nDotRayDirection = N.dot(ray.dir);
-//
-//        if( fabsf(nDotRayDirection) < EPSILON ) {
-//            return hit;
-//        }
-//
-//        float d = N.dot(v0);
-//
-//        hit.t = (N.dot(ray.org) + d) / nDotRayDirection;
-//
-//        printf("lol: %f\n", hit.t);
-//        if( hit.t < 0 )
-//            return hit;
-//
-//        printf("lel: %f\n", hit.t);
-//
-//        vec3 P = ray.org + ray.dir * hit.t;
-//
-//        vec3 C = v0v1.cross(P - v0);
-//
-//        if( N.dot(C)  < 0)
-//            return hit;
-//
-//        C = (v2 - v1).cross(P - v1);
-//
-//        if( N.dot(C)  < 0)
-//            return hit;
-//
-//        C = (v0 - v2).cross(P - v2);
-//
-//        if( N.dot(C)  < 0)
-//            return hit;
-//
-//        hit.position = P;
-//        hit.normal = ray.dir * (-1);
-//
-//        return hit;
-//    }
+    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 rotate = vec3(0, 0, 0)) : Intersectable(material), v0(v0), v1(v1), v2(v2) {
+//        this->v0 = rotateZ(v0, 30);
+//        this->v1 = rotateZ(v1, 30);
+//        this->v2 = rotateZ(v2, 30);
+    }
 
     Hit intersect(Ray & ray) {
         Hit hit;
@@ -698,14 +687,6 @@ public:
     }
 };
 
-vec3 torusPoint(float R, float r, float u, float v) {
-    return vec3(
-            (R + r * cosf(u * 2 * M_PI)) * cosf(v * 2 * M_PI),
-            (R + r * cosf(u * 2 * M_PI)) * sinf(v * 2 * M_PI),
-            r * sinf(u * 2 * M_PI)
-    );
-}
-
 // The virtual world: single quad
 FullScreenTexturedQuad fullScreenTexturedQuad;
 
@@ -749,16 +730,16 @@ void onInitialization() {
     for (unsigned int i = 0; i < N; i++) {
         for (unsigned int j = 0; j < M; j++) {
             world.add(new Triangle(
-                            torusPoint(R, r, (float)i / N, (float)j / M),
-                            torusPoint(R, r, (float)(i + 1) / N,  (float)j / M),
-                            torusPoint(R, r, (float)i / N, (float)(j + 1) / M),
+                            torusPoint(R, r, (float)i / N, (float)j / (float)M),
+                            torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
+                            torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
                     new GlassMaterial
                   ));
 
             world.add(new Triangle(
-                    torusPoint(R, r, (float)(i + 1) / N,  (float)j / M),
-                    torusPoint(R, r, (float)(i + 1) / N,  (float)(j + 1) / M),
-                    torusPoint(R, r, (float)i / N, (float)(j + 1) / M),
+                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
+                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)(j + 1) / (float)M),
+                    torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
                     new GoldMaterial
             ));
         }
