@@ -105,7 +105,7 @@ public:
     vec3 La;
 
     Light() {
-        La = vec3(0.286f, 0.341f, 0.972f);
+        La = vec3(0.280f, 0.330f, 0.980f);
         Lout = vec3(0.9f, 0.9f, 0.9f);
         poz = vec3(000.0f, 500.0f, 000.0f);
     }
@@ -158,14 +158,17 @@ public:
     {
         inDir.normalize();
         normal.normalize();
+
         return (inDir - normal * normal.dot(inDir) * 2.0f).normalize();
     };
 
     vec3 refract(vec3 inDir, vec3 normal) {
         inDir.normalize();
         normal.normalize();
+
         float ior = n;
         float cosa = normal.dot(inDir)* (-1.0f);
+
         if (cosa < 0) {
             cosa = -cosa;
             normal = normal*(-1.0f);
@@ -173,14 +176,17 @@ public:
         }
 
         float disc = 1 - (1 - cosa * cosa) / ior / ior;
-        if (disc < 0) return reflect(inDir, normal).normalize();
 
-        return (inDir / ior + normal * (cosa / ior - (float)sqrt(disc))).normalize();
+        if (disc < 0)
+            return reflect(inDir, normal).normalize();
+
+        return (inDir / ior + normal * (cosa / ior - sqrtf(disc))).normalize();
     }
 
     vec3 Fresnel(vec3 inDir, vec3 normal) {
         inDir.normalize();
         normal.normalize();
+
         float cosa = fabsf(normal.dot(inDir));
 
         return (F0 + (vec3(1, 1, 1) - F0) * (float)(pow(1 - cosa, 5))).normalize();
@@ -189,14 +195,21 @@ public:
     vec3 shade(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 inRad)
     {
         vec3 reflRad(0, 0, 0);
+
         float cosTheta = normal.dot(lightDir);
-        if (cosTheta < 0) return reflRad;
+
+        if (cosTheta < 0)
+            return reflRad;
+
         reflRad = inRad * kd * cosTheta;;
         vec3 halfway = (viewDir + lightDir).normalize();
-        float cosDelta = normal.dot(halfway);
-        if (cosDelta < 0) return reflRad;
 
-        return (reflRad + inRad * ks *(powf(cosDelta, shininess)));
+        float cosDelta = normal.dot(halfway);
+
+        if (cosDelta < 0)
+            return reflRad;
+
+        return (reflRad + inRad * ks * (powf(cosDelta, shininess)));
     }
 };
 
@@ -206,9 +219,9 @@ class GoldMaterial : public Material {
             calcF0(0.17, 3.1, 0.35, 2.7, 1.5, 1.9);
             ka = vec3(1.0f, 215.0f / 255.0f, 0.0f);
 
-            isReflective = false;
-            isRefractive = true;
-            isDif = false;
+            isReflective = true;
+            isRefractive = false;
+            isDif = true;
         }
 };
 
@@ -218,12 +231,12 @@ public:
         calcF0(1.5, 0, 1.5, 0, 1.5, 0);
         ka = vec3(0.1, 0.1, 0.1);
 
-        isReflective = false;
+        isReflective = true;
         isRefractive = true;
         isDif = false;
 
 //        shininess = 1;
-//        n = 1.3;
+        n = 1.0f + (float)EPSILON;
     }
 };
 
@@ -233,10 +246,9 @@ public:
         calcF0(0.14, 4.1, 0.16, 2.3, 0.13, 3.1);
         ka = vec3(192.0f / 255.0f, 192.0f / 255.0f, 192.0f / 255.0f);
 
-        isReflective = false;
+        isReflective = true;
         isRefractive = false;
         isDif = true;
-
     }
 };
 
@@ -273,46 +285,6 @@ public:
     Sphere(Material * material, vec3 const & org, float r) : Intersectable(material), origo(org), radius(r) {}
 
     Sphere(vec3 org = vec3(), float r = 1) : origo(org), radius(r) {}
-
-//    Hit intersect(Ray & rayIn)
-//    {
-//        Hit hit;
-//        Ray ray;
-//        ray.dir = rayIn.dir;
-//        ray.org = rayIn.org;
-//        hit.material = material;
-//
-//        float a = ray.dir.dot(ray.dir);
-//        float b = 2.0f * ((ray.org - origo).dot(ray.org));
-//        float c = origo.dot(origo) + ray.org.dot(ray.org) - 2.0f*(origo.dot(ray.org)) - powf(radius, 2);
-//
-//        float d = b * b - 4.0f * a * c;
-//
-//        if (d < 0)
-//        {
-//            hit.t = -1.0f;
-//            return hit;
-//        }
-//
-//        float t = ((-1.0f * b - sqrtf(d)) / (2.0f * a));
-//
-//        hit.position = ray.org + ray.dir * t;
-//        hit.normal = (hit.position - origo).normalize();
-//        hit.t = t;
-//
-//        if (t > EPSILON)
-//        {
-//            return hit;
-//        }
-//        else
-//        {
-//            hit.t = 0.0f;
-//            hit.position = ray.org + ray.dir * t;
-//            hit.normal = (hit.position - origo).normalize();
-//
-//            return hit;
-//        }
-//    }
 
     Hit intersect(Ray & ray) override {
         Hit hit;
@@ -398,10 +370,10 @@ class Triangle : public Intersectable {
 public:
     vec3 v0, v1, v2;
 
-    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 rotate = vec3(0, 0, 0)) : Intersectable(material), v0(v0), v1(v1), v2(v2) {
-//        this->v0 = rotateZ(v0, 30);
-//        this->v1 = rotateZ(v1, 30);
-//        this->v2 = rotateZ(v2, 30);
+    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 pos = vec3(), bool rotX = false) : Intersectable(material) {
+        this->v0 = pos + (rotX ? rotateX(v0, 90) : v0);
+        this->v1 = pos + (rotX ? rotateX(v1, 90) : v1);
+        this->v2 = pos + (rotX ? rotateX(v2, 90) : v2);
     }
 
     Hit intersect(Ray & ray) {
@@ -440,19 +412,6 @@ public:
     }
 };
 
-class Torus : Intersectable {
-public:
-    vec3 pos;
-
-    float r, R;
-
-    Torus(vec3 & pos, Material * material, float r, float R) : Intersectable(material), pos(pos), r{r}, R{R} {}
-
-    Hit intersect(Ray & ray) override {
-
-    }
-};
-
 class Camera {
 public:
     vec3 eye;
@@ -470,7 +429,9 @@ public:
 
 
     Ray getRay(int x, int y) {
-        vec3 p = lookat + right*((2.0f *(float)x / (float)windowWidth) - 1.0f) + up*(2.0f *(float)y / (float)windowHeight - 1.0f);
+        vec3 p = lookat +
+                right *((2.0f * (float)x / (float)windowWidth) - 1.0f) +
+                up * (2.0f * (float)y / (float)windowHeight - 1.0f);
 
         return Ray(eye, (p - eye).normalize());
     }
@@ -484,7 +445,7 @@ public:
     Light light;
     vec3 La;
 
-    Intersectable * objects[1000];
+    Intersectable * objects[200];
     unsigned nObjects;
 
     World() : nObjects(0) {
@@ -532,7 +493,7 @@ public:
     }
 
     vec3 trace(Ray & ray, int depth) {
-        if (depth > 10)
+        if (depth > 5)
             return La;
 
         float EPSZ = 0.07f;
@@ -550,7 +511,7 @@ public:
             Ray shadowRay(hit.position + hit.normal*EPSZ*sign(hit.normal, ray.dir*-1.0f), light.Ll(hit.position));
             Hit shadowHit = firstIntersect(shadowRay);
 
-            if (shadowHit.t<0 || shadowHit.t>light.getDist(hit.position))
+            if ( shadowHit.t < 0 || shadowHit.t > light.getDist(hit.position) )
                 outRadiance = outRadiance + hit.material->shade(hit.normal, (ray.dir*-1.0f), light.Ll(hit.position).normalize(), light.Lout);
         }
 
@@ -687,6 +648,33 @@ public:
     }
 };
 
+
+void generateTorus(World & world, float r, float R, Material * material, vec3 pos = vec3(), bool rotX = false) {
+    unsigned int N = 5, M = 5;
+
+    for (unsigned int i = 0; i < N; i++) {
+        for (unsigned int j = 0; j < M; j++) {
+            world.add(new Triangle(
+                    torusPoint(R, r, (float)i / N, (float)j / (float)M),
+                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
+                    torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
+                    material,
+                    pos,
+                    rotX
+            ));
+
+            world.add(new Triangle(
+                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
+                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)(j + 1) / (float)M),
+                    torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
+                    material,
+                    pos,
+                    rotX
+            ));
+        }
+    }
+}
+
 // The virtual world: single quad
 FullScreenTexturedQuad fullScreenTexturedQuad;
 
@@ -724,26 +712,9 @@ void onInitialization() {
 //            new GlassMaterial()
 //    ));
 
-    unsigned int N = 5, M = 5;
-    float R = 100, r = 50;
-
-    for (unsigned int i = 0; i < N; i++) {
-        for (unsigned int j = 0; j < M; j++) {
-            world.add(new Triangle(
-                            torusPoint(R, r, (float)i / N, (float)j / (float)M),
-                            torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
-                            torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
-                    new GlassMaterial
-                  ));
-
-            world.add(new Triangle(
-                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)j / (float)M),
-                    torusPoint(R, r, (float)(i + 1) / (float)N,  (float)(j + 1) / (float)M),
-                    torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
-                    new GoldMaterial
-            ));
-        }
-    }
+    generateTorus(world, 40, 140, new GlassMaterial, vec3(0, 0, 100));
+    generateTorus(world, 40, 100, new SilverMaterial, vec3(120, 0, 100), true);
+    generateTorus(world, 40, 100, new GoldMaterial, vec3(-120, 0, 100), true);
 
     world.render(background);
 
