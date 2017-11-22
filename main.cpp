@@ -1,8 +1,8 @@
 //=============================================================================================
 // Framework for the ray tracing homework
 // ---------------------------------------------------------------------------------------------
-// Name    : 
-// Neptun : 
+// Name    :
+// Neptun :
 //=============================================================================================
 
 #define _USE_MATH_DEFINES
@@ -18,7 +18,7 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #include <windows.h>
 #endif
-#include <GL/glew.h>		// must be downloaded 
+#include <GL/glew.h>		// must be downloaded
 #include <GL/freeglut.h>	// must be downloaded unless you have an Apple
 #endif
 
@@ -197,8 +197,7 @@ public:
     vec3 La;
 
     Light(vec3 const & pos, vec3 La) : poz(pos), La(La) {
-//        La = vec3(0.280f, 0.330f, 0.980f);
-        Lout = vec3(0.9f, 0.9f, 0.9f);
+        Lout = vec3(0.6f, 0.6f, 0.6f);
     }
 
     vec3 getLightDir(vec3& intersect) {
@@ -263,11 +262,11 @@ public:
         normal.normalize();
 
         float ior = n;
-        float cosa = normal.dot(inDir)* (-1.0f);
+        float cosa = normal.dot(inDir) * (-1.0f);
 
         if (cosa < 0) {
             cosa = -cosa;
-            normal = normal*(-1.0f);
+            normal = normal * (-1.0f);
             ior = 1 / n;
         }
 
@@ -307,7 +306,7 @@ public:
         if (cosTheta < EPSILON)
             return reflRad;
 
-        reflRad = inRad * kd * cosTheta;;
+        reflRad = inRad * kd * cosTheta;
         vec3 halfway = (viewDir + lightDir).normalize();
 
         float cosDelta = normal.dot(halfway);
@@ -360,9 +359,10 @@ class CylinderMaterial : public Material {
 public:
     CylinderMaterial() {
         ka = vec3(0.0f, 0.0f, 1.0f);
+        kd = vec3(0.9f, 0.9f, 0.9f);
+        ks = vec3(0.5f, 0.5f, 0.5f);
 
-        isReflective = true;
-//        isDif = true;
+        isDif = true;
     }
 };
 
@@ -398,46 +398,82 @@ public:
 
     Sphere(Material * material, vec3 const & org, float r) : Intersectable(material), origo(org), radius(r) {}
 
-    Sphere(vec3 org = vec3(), float r = 1) : origo(org), radius(r) {}
+//    Hit intersect(Ray & ray) override {
+//        Hit hit;
+//        hit.material = material;
+//
+//        float a = ray.dir.dot(ray.dir);
+//        float b = 2 * (ray.dir.dot(ray.org - origo));
+//        float c = (ray.org - origo).dot(ray.org - origo) - radius * radius;
+//
+//        float x = powf(ray.dir.dot(ray.org - origo), 2) - powf((ray.org - origo).Length(), 2) + radius * radius;
+//
+//        if( x < 0.0 )
+//            return hit;
+//
+//        if( x == 0.0 ) { // x < EPSILON
+//            float d = (-1) * (ray.dir.dot(ray.org - origo)) + sqrtf(x);
+//
+//            hit.position = ray.org + ray.dir * d;
+//            hit.t = d;
+//            hit.normal = (hit.position - origo).normalize();
+//
+//            return hit;
+//        }
+//
+//        x = sqrtf(x);
+//
+//        float d = (-1) * (ray.dir.dot(ray.org - origo));
+//        float d1 = d + x;
+//        float d2 = d - x;
+//
+//        if( fabsf(d1) < fabsf(d2) ) {
+//            hit.position = ray.org + ray.dir * d1;
+//            hit.t = fabsf(d1);
+//        } else {
+//            hit.position = ray.org + ray.dir * d2;
+//            hit.t = fabsf(d2);
+//        }
+//
+//        hit.normal = (hit.position - origo).normalize();
+//
+//        return hit;
+//    }
 
-    Hit intersect(Ray & ray) override {
+    Hit intersect(Ray & ray) {
         Hit hit;
         hit.material = material;
 
-        float a = ray.dir.dot(ray.dir);
-        float b = 2 * (ray.dir.dot(ray.org - origo));
-        float c = (ray.org - origo).dot(ray.org - origo) - radius * radius;
+        vec3 L = origo - ray.org;
 
-        float x = powf(ray.dir.dot(ray.org - origo), 2) - powf((ray.org - origo).Length(), 2) + radius * radius;
+        float t_ca = L.dot(ray.dir);
 
-        if( x < 0.0 )
+        if( t_ca < 0.0 )
             return hit;
 
-        if( x == 0.0 ) { // x < EPSILON
-            float d = (-1) * (ray.dir.dot(ray.org - origo)) + sqrtf(x);
+        float d2 = L.dot(L)  - (t_ca * t_ca);
 
-            hit.position = ray.org + ray.dir * d;
-            hit.t = d;
-            hit.normal = (hit.position - origo).normalize();
-
+        if( d2 > (radius * radius) )
             return hit;
-        }
 
-        x = sqrtf(x);
+        float t_hc = sqrtf((radius * radius) - d2);
 
-//        printf("X: %f\n", x);
-        float d = (-1) * (ray.dir.dot(ray.org - origo));
-        float d1 = d + x;
-        float d2 = d - x;
+        float t1 = t_ca + t_hc;
+        float t2 = t_ca - t_hc;
 
-        if( fabsf(d1) < fabsf(d2) ) {
-            hit.position = ray.org + ray.dir * d1;
-            hit.t = fabsf(d1);
-        } else {
-            hit.position = ray.org + ray.dir * d2;
-            hit.t = fabsf(d2);
-        }
+        float t = t1;
 
+        if( t1 > t2 )
+            t = t1;
+
+        if( t < 0.0 )
+            t = t2;
+
+        if( t < 0.0 )
+            return hit;
+
+        hit.t = t;
+        hit.position = ray.org + ray.dir * t;
         hit.normal = (hit.position - origo).normalize();
 
         return hit;
@@ -494,12 +530,29 @@ public:
 class Plane : public Intersectable {
 public:
     vec3 normal;
+    float d;
 
-    Plane(vec3 normal, Material * material) : Intersectable(material), normal(normal) {}
+    Plane(vec3 normal, float d, Material * material) : Intersectable(material), normal(normal), d(d) {}
 
     Hit intersect(Ray & ray) {
         Hit hit;
         hit.material = material;
+
+        float a = ray.dir.dot(normal);
+
+        if( a >= 0.0 )
+            return hit;
+
+        float t = (-1) * (ray.org.dot(normal) + d) / a;
+
+        if( t < 0.0 )
+            return hit;
+
+        hit.t = t;
+        hit.position = ray.org * ray.dir * t;
+        hit.normal = normal;
+
+        return hit;
     }
 };
 
@@ -710,11 +763,12 @@ public:
         vec3 outRadiance = hit.material->ka * lights[0]->La;
 
         if (hit.material->isDif) {
-            outRadiance = La * hit.material->ka; //  lights[0]->La
+            outRadiance = lights[0]->La * hit.material->ka; //  lights[0]->La
 
             for(int i = 0; i < nLights; i++) {
+//                printf("%d\n", i);
                 Ray shadowRay(
-                        hit.position + hit.normal * EPSILON, //EPSZ * sign(hit.normal, ray.dir * -1.0f),
+                        hit.position + hit.normal * EPSZ * sign(hit.normal, ray.dir * -1.0f), //EPSZ * sign(hit.normal, ray.dir * -1.0f),
                         lights[i]->Ll(hit.position)
                 );
 
@@ -728,16 +782,19 @@ public:
 
         if ( hit.material->isReflective ) {
             vec3 reflectionDir = hit.material->reflect(ray.dir, hit.normal);
-            Ray reflectedRay(hit.position + hit.normal * sign(hit.normal, (ray.dir* (-1.0f))), reflectionDir); // * EPSZ * sign(hit.normal, (ray.dir* (-1.0f)))
+            Ray reflectedRay(hit.position + hit.normal * EPSZ * sign(hit.normal, (ray.dir* (-1.0f))), reflectionDir); // * EPSZ * sign(hit.normal, (ray.dir* (-1.0f)))
 
-            outRadiance += trace(reflectedRay, depth + 1) * hit.material->Fresnel((ray.dir), hit.normal);
+            outRadiance += trace(reflectedRay, depth + 1) * hit.material->Fresnel(ray.dir, hit.normal);
         }
 
         if ( hit.material->isRefractive ) {
             vec3 refractionDir = hit.material->refract((ray.dir), hit.normal).normalize();
-            Ray refractedRay(hit.position - hit.normal * sign(hit.normal, (ray.dir* (-1.0f))), refractionDir); // EPSZ * sign(hit.normal, (ray.dir*(-1.0f)))
+            Ray refractedRay(
+                    hit.position - hit.normal * EPSZ * sign(hit.normal, (ray.dir * (-1.0f))),
+                    refractionDir
+            ); // EPSZ * sign(hit.normal, (ray.dir*(-1.0f)))
 
-            outRadiance += trace(refractedRay, depth + 1)*(vec3(1, 1, 1) - hit.material->Fresnel((ray.dir), hit.normal));
+            outRadiance += trace(refractedRay, depth + 1) * (vec3(1, 1, 1) - hit.material->Fresnel(ray.dir, hit.normal));
         }
 
         if( outRadiance.x > 1.0f )
@@ -849,18 +906,24 @@ void onInitialization() {
     World world;
 
 //    world.addLight(new Light(vec3(0, 500, 0), vec3(1, 1, 1)));
-    world.addLight(new Light(vec3(0, 0, -250), vec3(1, 1, 1)));
+    world.addLight(new Light(vec3(10, 50, -230), vec3(1, 1, 1)));
 //    lights[1] = new Light(vec3(0, 0, -250));
 //    lights[2] = new Light(vec3(-250, 30, 0));
 
-//    world.add(new Sphere(new CylinderMaterial, vec3(0, 10, -250), 10));
-//    world.add(new Sphere(new GlassMaterial, vec3(0, 0, -200), 10));
+//    world.add(new Sphere(new CylinderMaterial, vec3(10, 50, -230), 10));
 
-    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
-    generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
-    generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
+//    world.add(new Sphere(new GlassMaterial, vec3(0, 0, -260), 10));
+    world.add(new Sphere(new GlassMaterial, vec3(9, 0, -250), 10));
+    world.add(new Sphere(new SilverMaterial, vec3(30, 0, -250), 10));
+    world.add(new Sphere(new GoldMaterial, vec3(-20, 0, -250), 10));
+    world.add(new Plane(vec3(0, 1, 0), 15, new CylinderMaterial));
 
-    world.add(new Cylinder(vec3(0, 0, 10), 350, new CylinderMaterial));
+
+//    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
+//    generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
+//    generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
+//
+//    world.add(new Cylinder(vec3(0, 0, 10), 350, new CylinderMaterial));
 
     world.render(background);
 
