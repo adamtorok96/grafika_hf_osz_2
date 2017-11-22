@@ -144,6 +144,12 @@ struct vec3 {
         z *= n;
     }
 
+    void operator/=(float n) {
+        x /= n;
+        y /= n;
+        z /= n;
+    }
+
     void operator+=(vec3 const & v) {
         x += v.x;
         y += v.y;
@@ -154,6 +160,12 @@ struct vec3 {
         x *= v.x;
         y *= v.y;
         z *= v.z;
+    }
+
+    void operator/=(vec3 const & v) {
+        x /= v.x;
+        y /= v.y;
+        z /= v.z;
     }
 
 //    operator float*() { return &x; }
@@ -214,6 +226,8 @@ public:
     vec3 kd;
     vec3 ks;
 
+    vec3 N, K;
+
     bool isDif;
     bool isReflective;
     bool isRefractive;
@@ -228,6 +242,9 @@ public:
     }
 
     void calcF0(float nr, float kr, float ng, float kg, float nb, float kb) {
+        N = (nr, ng, nb);
+        K = (kr, kg, kb);
+
         F0.x = ((nr - 1)*(nr - 1) + kr*kr) / ((nr + 1)*(nr + 1) + kr*kr);
         F0.y = ((ng - 1)*(ng - 1) + kg*kg) / ((ng + 1)*(ng + 1) + kg*kg);
         F0.z = ((nb - 1)*(nb - 1) + kb*kb) / ((nb + 1)*(nb + 1) + kb*kb);
@@ -268,9 +285,18 @@ public:
 
         float cosa = fabsf(normal.dot(inDir));
 
-        // TODO: change it
         return (F0 + (vec3(1, 1, 1) - F0) * powf(1 - cosa, 5)).normalize();
     }
+
+//    vec3 Fresnel(vec3 const & inDir, vec3 const & normal) {
+//        float cosa = fabsf(normal.normalize().dot(inDir.normalize()));
+//
+//        return vec3(
+//                (0.5f) * (powf(fabsf((asinf(sinf(cosa) / N.x) - (N.x + K.x) * cosa) / (asinf(sinf(cosa) / N.x) + (N.x + K.x) * cosa)), 2) + powf(fabsf((cosa - (N.x + K.x) * asinf(sinf(cosa) / N.x)) / (cosa + (N.x + K.x) * asinf(sinf(cosa) / N.x))), 2)),
+//                (0.5f) * (powf(fabsf((asinf(sinf(cosa) / N.y) - (N.y + K.y) * cosa) / (asinf(sinf(cosa) / N.y) + (N.y + K.y) * cosa)), 2) + powf(fabsf((cosa - (N.y + K.y) * asinf(sinf(cosa) / N.y)) / (cosa + (N.y + K.y) * asinf(sinf(cosa) / N.y))), 2)),
+//                (0.5f) * (powf(fabsf((asinf(sinf(cosa) / N.z) - (N.z + K.z) * cosa) / (asinf(sinf(cosa) / N.z) + (N.z + K.z) * cosa)), 2) + powf(fabsf((cosa - (N.z + K.z) * asinf(sinf(cosa) / N.z)) / (cosa + (N.z + K.z) * asinf(sinf(cosa) / N.z))), 2))
+//        );
+//    }
 
     vec3 shade(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 inRad)
     {
@@ -333,7 +359,7 @@ public:
 class CylinderMaterial : public Material {
 public:
     CylinderMaterial() {
-        ka = vec3(1.0f, 0.0f, 0.0f);
+        ka = vec3(0.0f, 0.0f, 1.0f);
 
         isReflective = true;
 //        isDif = true;
@@ -465,6 +491,18 @@ public:
     }
 };
 
+class Plane : public Intersectable {
+public:
+    vec3 normal;
+
+    Plane(vec3 normal, Material * material) : Intersectable(material), normal(normal) {}
+
+    Hit intersect(Ray & ray) {
+        Hit hit;
+        hit.material = material;
+    }
+};
+
 vec3 rotateX(vec3 v, float angle) {
     return vec3(
             v.x * 1 + v.y * 0 + v.z * 0,
@@ -491,9 +529,9 @@ vec3 rotateZ(vec3 v, float angle) {
 
 vec3 torusPoint(float R, float r, float u, float v) {
     return vec3(
-            (R + r * cosf(u * 2 * M_PI)) * cosf(v * 2 * M_PI),
-            (R + r * cosf(u * 2 * M_PI)) * sinf(v * 2 * M_PI),
-            r * sinf(u * 2 * M_PI)
+            (R + r * cosf(u * 2 * (float)M_PI)) * cosf(v * 2 * (float)M_PI),
+            (R + r * cosf(u * 2 * (float)M_PI)) * sinf(v * 2 * (float)M_PI),
+            r * sinf(u * 2 * (float)M_PI)
     );
 }
 
@@ -503,10 +541,10 @@ class Triangle : public Intersectable {
 public:
     vec3 v0, v1, v2;
 
-    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 pos = vec3(), bool rotX = false) : Intersectable(material) {
-        this->v0 = pos + (rotX ? rotateX(v0, 90) : v0);
-        this->v1 = pos + (rotX ? rotateX(v1, 90) : v1);
-        this->v2 = pos + (rotX ? rotateX(v2, 90) : v2);
+    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 pos = vec3(), vec3 rot = vec3()) : Intersectable(material) {
+        this->v0 = pos + rotateZ(rotateY(rotateX(v0, rot.x), rot.y), rot.z);
+        this->v1 = pos + rotateZ(rotateY(rotateX(v1, rot.x), rot.y), rot.z);
+        this->v2 = pos + rotateZ(rotateY(rotateX(v2, rot.x), rot.y), rot.z);
     }
 
 //    Hit intersect(Ray & ray) {
@@ -768,8 +806,10 @@ public:
 };
 
 
-void generateTorus(World & world, float r, float R, Material * material, vec3 pos = vec3(), bool rotX = false) {
+void generateTorus(World & world, float r, float R, Material * material, vec3 pos = vec3(), vec3 rot = vec3()) {
     unsigned int N = 5, M = 5;
+
+    rot /= (2 * (float)M_PI);
 
     for (unsigned int i = 0; i < N; i++) {
         for (unsigned int j = 0; j < M; j++) {
@@ -779,7 +819,7 @@ void generateTorus(World & world, float r, float R, Material * material, vec3 po
                     torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
                     material,
                     pos,
-                    rotX
+                    rot
             ));
 
             world.add(new Triangle(
@@ -788,7 +828,7 @@ void generateTorus(World & world, float r, float R, Material * material, vec3 po
                     torusPoint(R, r, (float)i / (float)N, (float)(j + 1) / (float)M),
                     material,
                     pos,
-                    rotX
+                    rot
             ));
         }
     }
@@ -816,11 +856,11 @@ void onInitialization() {
 //    world.add(new Sphere(new CylinderMaterial, vec3(0, 10, -250), 10));
 //    world.add(new Sphere(new GlassMaterial, vec3(0, 0, -200), 10));
 
-    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100));
-    generateTorus(world, 20, 50, new SilverMaterial, vec3(60, 0, -100), true);
-    generateTorus(world, 20, 50, new GoldMaterial, vec3(-60, 0, -100), true);
+    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
+    generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
+    generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
 
-//    world.add(new Cylinder(vec3(0, 0, 10), 10, new CylinderMaterial));
+    world.add(new Cylinder(vec3(0, 0, 10), 350, new CylinderMaterial));
 
     world.render(background);
 
