@@ -144,6 +144,12 @@ struct vec3 {
         z *= n;
     }
 
+    void operator+=(vec3 const & v) {
+        x += v.x;
+        y += v.y;
+        z += v.z;
+    }
+
     void operator*=(vec3 const & v) {
         x *= v.x;
         y *= v.y;
@@ -418,7 +424,7 @@ public:
     vec3 org;
     float r;
 
-    Cylinder(float r, Material * material) : Intersectable(material), r(r) {}
+    Cylinder(vec3 org, float r, Material * material) : Intersectable(material), org(org), r(r) {}
 
     Hit intersect(Ray & ray) {
         Hit hit;
@@ -448,12 +454,12 @@ public:
         if( t < 0 )
             t = t0;
 
-        if( t < 0 )
+        if( t < EPSILON )
             return hit;
 
         hit.t = t;
         hit.position = ray.org + ray.dir * t;
-        hit.normal = vec3(hit.position.x * 2, 0, hit.position.z * 2).normalize();
+        hit.normal = vec3(hit.position.x, 0, hit.position.y).normalize();
 
         return hit;
     }
@@ -666,9 +672,9 @@ public:
         vec3 outRadiance = hit.material->ka * lights[0]->La;
 
         if (hit.material->isDif) {
-            for(int i = 0; i < nLights; i++) {
-                outRadiance =  lights[i]->La * hit.material->ka;
+            outRadiance = La * hit.material->ka; //  lights[0]->La
 
+            for(int i = 0; i < nLights; i++) {
                 Ray shadowRay(
                         hit.position + hit.normal * EPSILON, //EPSZ * sign(hit.normal, ray.dir * -1.0f),
                         lights[i]->Ll(hit.position)
@@ -676,8 +682,8 @@ public:
 
                 Hit shadowHit = firstIntersect(shadowRay);
 
-                if ( shadowHit.t < 0 || shadowHit.t > lights[i]->getDist(hit.position) ) {
-                    outRadiance = outRadiance + hit.material->shade(hit.normal, (ray.dir*-1.0f), lights[i]->Ll(hit.position), lights[i]->Lout); // .normalize()
+                if ( shadowHit.t < 0 || shadowHit.t > lights[i]->getDist(hit.position) ) { // fordítva a
+                    outRadiance += hit.material->shade(hit.normal, (ray.dir * -1.0f), lights[i]->Ll(hit.position), lights[i]->Lout); // .normalize()
                 }
             }
         }
@@ -686,13 +692,14 @@ public:
             vec3 reflectionDir = hit.material->reflect(ray.dir, hit.normal);
             Ray reflectedRay(hit.position + hit.normal * sign(hit.normal, (ray.dir* (-1.0f))), reflectionDir); // * EPSZ * sign(hit.normal, (ray.dir* (-1.0f)))
 
-            outRadiance = outRadiance + trace(reflectedRay, depth + 1) * hit.material->Fresnel((ray.dir), hit.normal);
+            outRadiance += trace(reflectedRay, depth + 1) * hit.material->Fresnel((ray.dir), hit.normal);
         }
 
         if ( hit.material->isRefractive ) {
             vec3 refractionDir = hit.material->refract((ray.dir), hit.normal).normalize();
             Ray refractedRay(hit.position - hit.normal * sign(hit.normal, (ray.dir* (-1.0f))), refractionDir); // EPSZ * sign(hit.normal, (ray.dir*(-1.0f)))
-            outRadiance = outRadiance + trace(refractedRay, depth + 1)*(vec3(1, 1, 1) - hit.material->Fresnel((ray.dir), hit.normal));
+
+            outRadiance += trace(refractedRay, depth + 1)*(vec3(1, 1, 1) - hit.material->Fresnel((ray.dir), hit.normal));
         }
 
         if( outRadiance.x > 1.0f )
@@ -791,6 +798,9 @@ void generateTorus(World & world, float r, float R, Material * material, vec3 po
 FullScreenTexturedQuad fullScreenTexturedQuad;
 vec3 background[windowWidth * windowHeight];	// The image, which stores the ray tracing result
 
+// x: jobb, bal
+// y: fel, le
+// z: előre, hátra
 
 // Initialization, create an OpenGL context
 void onInitialization() {
@@ -810,7 +820,7 @@ void onInitialization() {
     generateTorus(world, 20, 50, new SilverMaterial, vec3(60, 0, -100), true);
     generateTorus(world, 20, 50, new GoldMaterial, vec3(-60, 0, -100), true);
 
-    world.add(new Cylinder(350, new CylinderMaterial));
+//    world.add(new Cylinder(vec3(0, 0, 10), 10, new CylinderMaterial));
 
     world.render(background);
 
