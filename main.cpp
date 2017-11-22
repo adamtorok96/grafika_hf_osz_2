@@ -326,11 +326,8 @@ public:
 
         isReflective = true;
         isRefractive = true;
-        isDif = false;
 
-//        shininess = 1;
-//        n = 1.0f + (float)EPSILON;
-        n = 1.5f;
+        n = 1.0f;
     }
 };
 
@@ -763,7 +760,7 @@ public:
         vec3 outRadiance = hit.material->ka * lights[0]->La;
 
         if (hit.material->isDif) {
-            outRadiance = lights[0]->La * hit.material->ka; //  lights[0]->La
+            outRadiance = vec3(0.1, 0.1, 0.1) * hit.material->ka; //  lights[0]->La
 
             for(int i = 0; i < nLights; i++) {
 //                printf("%d\n", i);
@@ -782,7 +779,10 @@ public:
 
         if ( hit.material->isReflective ) {
             vec3 reflectionDir = hit.material->reflect(ray.dir, hit.normal);
-            Ray reflectedRay(hit.position + hit.normal * EPSZ * sign(hit.normal, (ray.dir* (-1.0f))), reflectionDir); // * EPSZ * sign(hit.normal, (ray.dir* (-1.0f)))
+            Ray reflectedRay(
+                    hit.position + hit.normal * EPSZ * sign(hit.normal, (ray.dir* (-1.0f))),
+                    reflectionDir
+            ); // * EPSZ * sign(hit.normal, (ray.dir* (-1.0f)))
 
             outRadiance += trace(reflectedRay, depth + 1) * hit.material->Fresnel(ray.dir, hit.normal);
         }
@@ -905,25 +905,26 @@ void onInitialization() {
 
     World world;
 
-//    world.addLight(new Light(vec3(0, 500, 0), vec3(1, 1, 1)));
+    world.addLight(new Light(vec3(-30, 10, -220), vec3(1, 1, 1)));
     world.addLight(new Light(vec3(10, 50, -230), vec3(1, 1, 1)));
+    world.addLight(new Light(vec3(0, 0, 0), vec3(1, 1, 1)));
 //    lights[1] = new Light(vec3(0, 0, -250));
 //    lights[2] = new Light(vec3(-250, 30, 0));
 
 //    world.add(new Sphere(new CylinderMaterial, vec3(10, 50, -230), 10));
 
-//    world.add(new Sphere(new GlassMaterial, vec3(0, 0, -260), 10));
-    world.add(new Sphere(new GlassMaterial, vec3(9, 0, -250), 10));
-    world.add(new Sphere(new SilverMaterial, vec3(30, 0, -250), 10));
-    world.add(new Sphere(new GoldMaterial, vec3(-20, 0, -250), 10));
-    world.add(new Plane(vec3(0, 1, 0), 15, new CylinderMaterial));
+//    world.add(new Sphere(new GoldMaterial, vec3(20, 20, -250), 10));
+//    world.add(new Sphere(new GlassMaterial, vec3(9, 0, -250), 10));
+//    world.add(new Sphere(new SilverMaterial, vec3(30, 0, -250), 10));
+//    world.add(new Sphere(new GoldMaterial, vec3(-20, 0, -250), 10));
+//    world.add(new Plane(vec3(0, 1, 0), 15, new CylinderMaterial));
 
 
-//    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
-//    generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
-//    generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
+    generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
+    generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
+    generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
 //
-//    world.add(new Cylinder(vec3(0, 0, 10), 350, new CylinderMaterial));
+    world.add(new Cylinder(vec3(0, 0, 10), 350, new CylinderMaterial));
 
     world.render(background);
 
