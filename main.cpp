@@ -1,8 +1,8 @@
 //=============================================================================================
 // Framework for the ray tracing homework
 // ---------------------------------------------------------------------------------------------
-// Name    :
-// Neptun :
+// Name   : Török Ádám
+// Neptun : I5RVI0
 //=============================================================================================
 
 #define _USE_MATH_DEFINES
@@ -763,7 +763,6 @@ public:
             outRadiance = vec3(0.2, 0.2, 0.2) * hit.material->ka; //  lights[0]->La
 
             for(int i = 0; i < nLights; i++) {
-//                printf("%d\n", i);
                 Ray shadowRay(
                         hit.position + hit.normal * EPSZ * sign(hit.normal, ray.dir * -1.0f), //EPSZ * sign(hit.normal, ray.dir * -1.0f),
                         lights[i]->Ll(hit.position)
