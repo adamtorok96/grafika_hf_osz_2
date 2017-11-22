@@ -610,8 +610,9 @@ vec3 torusPoint(float R, float r, float u, float v) {
 class Triangle : public Intersectable {
 public:
     vec3 v0, v1, v2;
+    vec3 pos;
 
-    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 pos = vec3(), vec3 rot = vec3()) : Intersectable(material) {
+    Triangle(vec3 v0, vec3 v1, vec3 v2, Material * material, vec3 pos = vec3(), vec3 rot = vec3()) : Intersectable(material), pos(pos) {
         this->v0 = pos + rotateZ(rotateY(rotateX(v0, rot.x), rot.y), rot.z);
         this->v1 = pos + rotateZ(rotateY(rotateX(v1, rot.x), rot.y), rot.z);
         this->v2 = pos + rotateZ(rotateY(rotateX(v2, rot.x), rot.y), rot.z);
@@ -671,6 +672,7 @@ public:
         hit.t = v0v2.dot(qvec) * invDet;
         hit.position = ray.org + ray.dir * hit.t;
         hit.normal = (v0v1.cross(v0v2)).normalize();
+//        hit.normal = (hit.position - pos).normalize();
 
         return hit;
     }
@@ -939,9 +941,9 @@ void onInitialization() {
 //    world.add(new Plane(vec3(0, 1, 0), 15, new CylinderMaterial));
 
 
-    world.addLight(new Light(vec3(0, 200, -100), vec3(1, 1, 1)));
-    world.addLight(new Light(vec3(0, 0, -200), vec3(1, 1, 1)));
-    world.addLight(new Light(vec3(-100, 0, 0), vec3(1, 1, 1)));
+    world.addLight(new Light(vec3(0, 200, -100), vec3(0.8, 0.8, 0.9)));
+    world.addLight(new Light(vec3(0, 0, -200), vec3(0.8, 0.9, 0.8)));
+    world.addLight(new Light(vec3(-100, 0, 0), vec3(0.9, 0.8, 0.8)));
 
     generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
     generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
