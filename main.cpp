@@ -287,6 +287,25 @@ public:
         return (F0 + (vec3(1, 1, 1) - F0) * powf(1 - cosa, 5)).normalize();
     }
 
+//    vec3 Fresnel(vec3 inDir, vec3 normal) {
+//        inDir.normalize();
+//        normal.normalize();
+//
+//        float b = fabsf(normal.dot(inDir));
+//        float o = acosf(b);
+//
+//        return (vec3(
+//            powf(fabsf((cosf(asinf(sinf(o) / N.x)) - (N.x + K.x) * b) / (cosf(asinf(sinf(o) / N.x)) + (N.x + K.x * b))), 2) +
+//            powf(fabsf((b - (N.x + K.x) * cosf(asinf(sinf(o) / N.x))) / (b + (N.x + K.x * cosf(asinf(sinf(o) / N.x))))), 2),
+//
+//            powf(fabsf((cosf(asinf(sinf(o) / N.y)) - (N.y + K.y) * b) / (cosf(asinf(sinf(o) / N.y)) + (N.y + K.y * b))), 2) +
+//            powf(fabsf((b - (N.y + K.y) * cosf(asinf(sinf(o) / N.y))) / (b + (N.y + K.y * cosf(asinf(sinf(o) / N.y))))), 2),
+//
+//            powf(fabsf((cosf(asinf(sinf(o) / N.z)) - (N.z + K.z) * b) / (cosf(asinf(sinf(o) / N.z)) + (N.z + K.z * b))), 2) +
+//            powf(fabsf((b - (N.z + K.z) * cosf(asinf(sinf(o) / N.z))) / (b + (N.z + K.z * cosf(asinf(sinf(o) / N.z))))), 2)
+//        ) * 0.5f).normalize();
+//    }
+
 //    vec3 Fresnel(vec3 const & inDir, vec3 const & normal) {
 //        float cosa = fabsf(normal.normalize().dot(inDir.normalize()));
 //
@@ -355,7 +374,7 @@ public:
 class CylinderMaterial : public Material {
 public:
     CylinderMaterial() {
-        ka = vec3(0.0f, 0.0f, 1.0f);
+//        ka = vec3(0.0f, 0.0f, 1.0f);
         kd = vec3(0.9f, 0.9f, 0.9f);
         ks = vec3(0.5f, 0.5f, 0.5f);
 
@@ -519,6 +538,7 @@ public:
         hit.t = t;
         hit.position = ray.org + ray.dir * t;
         hit.normal = vec3(hit.position.x, 0, hit.position.y).normalize();
+        hit.material->ka = hit.normal; // custom texture :P
 
         return hit;
     }
@@ -926,12 +946,10 @@ void onInitialization() {
     generateTorus(world, 20, 70, new GlassMaterial, vec3(0, 0, -100), vec3(1, 5, 5));
     generateTorus(world, 20, 50, new SilverMaterial, vec3(50, 0, -140), vec3(80, 5, -8));
     generateTorus(world, 20, 50, new GoldMaterial, vec3(-50, 0, -100), vec3(80, 5, -8));
-//
+
     world.add(new Cylinder(vec3(0, 0, 0), 350, new CylinderMaterial));
 
     world.render(background);
-
-    printf("render ready\n");
 
     fullScreenTexturedQuad.Create(background);
 
